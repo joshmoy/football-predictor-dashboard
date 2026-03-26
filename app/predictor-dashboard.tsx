@@ -48,7 +48,7 @@ type DashboardForm = {
 };
 
 const initialForm: DashboardForm = {
-  dataSource: "sample",
+  dataSource: "football-data-api",
   gameweek: "",
   futureGameweekOnly: false,
   competitionCode: "PL",
@@ -90,8 +90,14 @@ export function PredictorDashboard() {
       });
 
       const payload = (await response.json()) as PredictorResponse | { error: string };
-      if (!response.ok || "error" in payload) {
-        throw new Error("error" in payload ? payload.error : "Prediction request failed.");
+      if (!response.ok || "error" in payload || "detail" in payload) {
+        if ("error" in payload) {
+          throw new Error(payload.error);
+        }
+        if ("detail" in payload) {
+          throw new Error(String(payload.detail));
+        }
+        throw new Error("Prediction request failed.");
       }
 
       setData(payload);
@@ -151,8 +157,8 @@ export function PredictorDashboard() {
                 }))
               }
             >
-              <option value="sample">Bundled sample data</option>
               <option value="football-data-api">football-data.org API</option>
+              <option value="sample">Bundled sample data</option>
             </select>
           </label>
 
