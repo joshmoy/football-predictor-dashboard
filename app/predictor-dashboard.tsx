@@ -56,6 +56,9 @@ const initialForm: DashboardForm = {
   season: ""
 };
 
+const predictorApiUrl =
+  process.env.NEXT_PUBLIC_PREDICTOR_API_URL ?? "http://127.0.0.1:8000/predict";
+
 export function PredictorDashboard() {
   const [form, setForm] = useState<DashboardForm>(initialForm);
   const [data, setData] = useState<PredictorResponse | null>(null);
@@ -71,7 +74,7 @@ export function PredictorDashboard() {
     setError(null);
 
     try {
-      const response = await fetch("/api/predictions", {
+      const response = await fetch(predictorApiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -208,7 +211,8 @@ export function PredictorDashboard() {
 
           <p className="helper">
             API mode uses the same Python entrypoint as the terminal workflow, so your `.env`
-            token and model logic stay in one place.
+            token and model logic stay in the FastAPI backend while this frontend just renders
+            the results.
           </p>
         </form>
 
