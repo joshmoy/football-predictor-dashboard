@@ -10,8 +10,8 @@ type Prediction = {
   home_win_probability: number;
   draw_probability: number;
   away_win_probability: number;
-  expected_home_goals: number;
-  expected_away_goals: number;
+  predicted_home_goals: number;
+  predicted_away_goals: number;
   predicted_outcome: string;
   model_confidence: number;
   predicted_scoreline: string;
@@ -289,9 +289,9 @@ export function PredictorDashboard() {
                     <strong>{formatPercent(prediction.scoreline_probability)}</strong>
                   </div>
                   <div>
-                    <span className="panel-label">Expected goals</span>
+                    <span className="panel-label">Predicted goals</span>
                     <strong>
-                      {prediction.expected_home_goals.toFixed(2)} - {prediction.expected_away_goals.toFixed(2)}
+                      {prediction.predicted_home_goals} - {prediction.predicted_away_goals}
                     </strong>
                   </div>
                 </div>
