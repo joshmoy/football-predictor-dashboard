@@ -58,6 +58,25 @@ type PredictorResponse = {
   predictions: Prediction[];
 };
 
+type PublishResult = {
+  fixture_id: number;
+  fixture: {
+    id: number;
+    round: number;
+    home_team: string;
+    away_team: string;
+    kickoff_time: string | null;
+  };
+  submitted_prediction: {
+    home_team_score: number;
+    away_team_score: number;
+  };
+  response: {
+    message?: string;
+    status?: boolean;
+  };
+};
+
 type DashboardForm = {
   dataSource: "sample" | "football-data-api";
   gameweek: string;
@@ -84,6 +103,7 @@ export function PredictorDashboard() {
   const [data, setData] = useState<PredictorResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [publishState, setPublishState] = useState<Record<string, string>>({});
 
   useEffect(() => {
     void runPrediction(initialForm);
@@ -131,6 +151,50 @@ export function PredictorDashboard() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void runPrediction(form);
+  }
+
+  async function sendPredictionToGoborr(prediction: Prediction) {
+    const predictionKey = `${prediction.fixture_date}-${prediction.home_team}-${prediction.away_team}`;
+    setPublishState((current) => ({ ...current, [predictionKey]: "Sending..." }));
+
+    try {
+      const response = await fetch(`${predictorApiUrl.replace(/\/predict$/, "")}/goborr/publish`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          roundNumber: prediction.gameweek,
+          homeTeam: prediction.home_team,
+          awayTeam: prediction.away_team,
+          homeScore: prediction.predicted_home_goals,
+          awayScore: prediction.predicted_away_goals
+        })
+      });
+
+      const payload = (await response.json()) as PublishResult | { detail?: string; error?: string };
+      if (!response.ok || "detail" in payload || "error" in payload) {
+        if ("detail" in payload && payload.detail) {
+          throw new Error(payload.detail);
+        }
+        if ("error" in payload && payload.error) {
+          throw new Error(payload.error);
+        }
+        throw new Error("Failed to publish prediction to Goborr.");
+      }
+
+      const publishPayload = payload as PublishResult;
+      const message =
+        publishPayload.response?.message ??
+        `Sent to Goborr fixture ${publishPayload.fixture_id}`;
+      setPublishState((current) => ({ ...current, [predictionKey]: message }));
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to publish prediction to Goborr.";
+      setPublishState((current) => ({ ...current, [predictionKey]: message }));
+    }
   }
 
   const selectedGameweeks = data?.summary.selected_gameweeks ?? [];
@@ -383,6 +447,24 @@ export function PredictorDashboard() {
                 <p className="confidence-line">
                   Model confidence: <strong>{formatPercent(prediction.model_confidence)}</strong>
                 </p>
+
+                <div className="publish-row">
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() => void sendPredictionToGoborr(prediction)}
+                    disabled={loading}
+                  >
+                    Send to Goborr
+                  </button>
+                  <span className="publish-status">
+                    {
+                      publishState[
+                        `${prediction.fixture_date}-${prediction.home_team}-${prediction.away_team}`
+                      ] ?? "Not sent yet"
+                    }
+                  </span>
+                </div>
               </article>
             ))}
           </div>

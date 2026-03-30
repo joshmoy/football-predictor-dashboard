@@ -175,6 +175,22 @@ body {
   opacity: 0.72;
 }
 
+.secondary-button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 14px;
+}
+
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .helper {
   margin: 20px 0 0;
   line-height: 1.6;
@@ -402,6 +418,21 @@ body {
   color: var(--ink-soft);
 }
 
+.publish-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.publish-status {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
 .eyebrow {
   color: var(--accent);
   font-size: 0.78rem;
@@ -450,6 +481,15 @@ body {
   .context-card-top {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .publish-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .publish-status {
+    text-align: left;
   }
 
   .stats-grid,
