@@ -18,6 +18,20 @@ type Prediction = {
   scoreline_probability: number;
 };
 
+type GeminiContextRow = {
+  team: string;
+  effective_date: string | null;
+  gameweek: number | null;
+  squad_strength: number | null;
+  availability_score: number | null;
+  expected_lineup_strength: number | null;
+  injury_count: number | null;
+  suspended_count: number | null;
+  confidence: number | null;
+  notes: string | null;
+  source_summary: string | null;
+};
+
 type PredictorResponse = {
   request: {
     data_source: "sample" | "football-data-api";
@@ -26,14 +40,20 @@ type PredictorResponse = {
     future_gameweek_only: boolean;
     historical_seasons: number[] | null;
     season: number | null;
+    use_gemini_context: boolean;
+    gemini_model: string | null;
+    gemini_context_output_path: string | null;
   };
   summary: {
     data_source_label: string;
     historical_match_count: number;
     upcoming_fixture_count: number;
     team_context_count: number;
+    gemini_context_count: number;
+    gemini_context_artifact_path: string | null;
     selected_gameweeks: number[];
   };
+  gemini_context_rows: GeminiContextRow[];
   validation_metrics: Record<string, number>;
   predictions: Prediction[];
 };
@@ -114,6 +134,7 @@ export function PredictorDashboard() {
   }
 
   const selectedGameweeks = data?.summary.selected_gameweeks ?? [];
+  const geminiContextRows = data?.gemini_context_rows ?? [];
 
   return (
     <main className="shell">
@@ -229,6 +250,7 @@ export function PredictorDashboard() {
             <MetricCard label="Historical matches" value={data?.summary.historical_match_count ?? 0} />
             <MetricCard label="Upcoming fixtures" value={data?.summary.upcoming_fixture_count ?? 0} />
             <MetricCard label="Team context rows" value={data?.summary.team_context_count ?? 0} />
+            <MetricCard label="Gemini rows" value={data?.summary.gemini_context_count ?? 0} />
             <MetricCard
               label="Selected gameweek"
               value={selectedGameweeks.length > 0 ? selectedGameweeks.join(", ") : "Auto"}
@@ -262,6 +284,62 @@ export function PredictorDashboard() {
                 compact
               />
             </div>
+          </div>
+
+          <div className="validation-card">
+            <div className="context-header">
+              <div>
+                <span className="panel-label">Gemini audit</span>
+                <h2>Live team context fed into the model</h2>
+              </div>
+              <div className="context-meta">
+                <span>{data?.request.gemini_model ?? "Gemini disabled"}</span>
+                {data?.summary.gemini_context_artifact_path ? (
+                  <code>{data.summary.gemini_context_artifact_path}</code>
+                ) : null}
+              </div>
+            </div>
+
+            {geminiContextRows.length > 0 ? (
+              <div className="context-grid">
+                {geminiContextRows.map((row) => (
+                  <article className="context-card" key={`${row.team}-${row.gameweek ?? "na"}`}>
+                    <div className="context-card-top">
+                      <div>
+                        <p className="panel-label">
+                          {row.effective_date ?? "Unknown date"}
+                          {row.gameweek ? ` · Gameweek ${row.gameweek}` : ""}
+                        </p>
+                        <h3>{row.team}</h3>
+                      </div>
+                      <span className="context-confidence">
+                        Confidence {formatPercent(row.confidence ?? undefined)}
+                      </span>
+                    </div>
+
+                    <div className="context-metrics">
+                      <MetricChip label="Squad" value={formatOneDecimal(row.squad_strength)} />
+                      <MetricChip label="Available" value={formatOneDecimal(row.availability_score)} />
+                      <MetricChip label="Lineup" value={formatOneDecimal(row.expected_lineup_strength)} />
+                      <MetricChip label="Injuries" value={formatOneDecimal(row.injury_count)} />
+                      <MetricChip label="Suspensions" value={formatOneDecimal(row.suspended_count)} />
+                    </div>
+
+                    {row.notes ? <p className="context-notes">{row.notes}</p> : null}
+                    {row.source_summary ? (
+                      <p className="context-sources">
+                        <span className="panel-label">Sources</span>
+                        {row.source_summary}
+                      </p>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="helper context-empty">
+                No Gemini context rows were returned for this run.
+              </p>
+            )}
           </div>
 
           <div className="prediction-list">
@@ -314,6 +392,15 @@ export function PredictorDashboard() {
   );
 }
 
+function MetricChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="metric-chip">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
 function MetricCard({
   label,
   value,
@@ -357,4 +444,11 @@ function formatDecimal(value?: number) {
     return "--";
   }
   return value.toFixed(3);
+}
+
+function formatOneDecimal(value?: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "--";
+  }
+  return value.toFixed(1);
 }
